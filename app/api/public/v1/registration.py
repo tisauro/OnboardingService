@@ -1,9 +1,11 @@
-from fastapi import Depends, APIRouter, Header, HTTPException, Security, status
-from app.core.schemas import schemas
-from app.core.db.database import get_db
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
-from app.core.settings import get_settings, Settings
+
 from app.core import aws_iot_client, security
+from app.core.db.database import get_db
+from app.core.schemas import schemas
+from app.core.settings import Settings, get_settings
+
 # ==============================================================================
 # Public Endpoint: Device Provisioning
 # ==============================================================================
@@ -14,13 +16,13 @@ registration_router = APIRouter()
     "/register",
     response_model=schemas.DeviceProvisionResponse,
     tags=["Device Provisioning"],
-    summary="Public: Device registers itself using a bootstrap key."
+    summary="Public: Device registers itself using a bootstrap key.",
 )
 async def register_device(
-        registration_data: schemas.DeviceRegistrationRequest,
-        x_api_key: str = Header(..., description="The device's unique bootstrap API key"),
-        db: Session = Depends(get_db),
-        settings: Settings = Depends(get_settings)
+    registration_data: schemas.DeviceRegistrationRequest,
+    x_api_key: str = Header(..., description="The device's unique bootstrap API key"),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ):
     """
     This public endpoint is hit by a device on its first boot.
@@ -41,20 +43,18 @@ async def register_device(
 
     if not db_key:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired bootstrap key."
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired bootstrap key."
         )
 
     try:
         provision_data = await aws_iot_client.provision_device(
-            device_id=registration_data.device_id,
-            policy_name=settings.IOT_POLICY_NAME
+            device_id=registration_data.device_id, policy_name=settings.IOT_POLICY_NAME
         )
     except Exception as e:
         # Catch potential AWS errors (e.g., Thing already exists, policy not found)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to provision device in AWS: {str(e)}"
+            detail=f"Failed to provision device in AWS: {str(e)}",
         )
 
     # Deactivate the key to prevent re-use

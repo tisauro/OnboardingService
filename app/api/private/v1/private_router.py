@@ -1,6 +1,8 @@
-from fastapi import APIRouter
-from app.api.private.v1.bootstrap_keys import boostrap_key_router
 import logging
+
+from fastapi import APIRouter
+
+from app.api.private.v1.bootstrap_keys import boostrap_key_router
 
 logger = logging.getLogger("uvicorn")
 
