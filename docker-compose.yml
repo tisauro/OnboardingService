@@ -1,0 +1,9 @@
+services:
+  pg_db:
+    image: postgres:17
+    env_file: .env
+    volumes:
+      - ./.db/pg_data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+
