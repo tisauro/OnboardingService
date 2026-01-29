@@ -1,21 +1,18 @@
-import datetime
-import secrets
+from fastapi import APIRouter, HTTPException, status
+from sqlalchemy.future import select
 
-from fastapi import APIRouter, Depends, HTTPException, Security, status
-from sqlalchemy.orm import Session
-
-from app.core import aws_iot_client, security
+from app.api.deps import SessionDep, PaginationDep
+from app.core import security
+from app.core.crud.bootstrap_keys import create_key, get_keys, delete_key, update_key_status
 from app.core.db import models
-from app.core.db.database import get_db
 from app.core.schemas import schemas
+from app.core.schemas.schemas import BootstrapKeyUpdateRequest
 
 # ==============================================================================
 # Private Endpoints: Admin Management
 # ==============================================================================
 
 boostrap_key_router = APIRouter()
-
-admin_api_key = Security(security.get_admin_api_key)
 
 
 @boostrap_key_router.post(
@@ -24,37 +21,27 @@ admin_api_key = Security(security.get_admin_api_key)
     tags=["Admin"],
     summary="Admin: Create a new bootstrap key.",
 )
-def create_bootstrap_key(
-    key_data: schemas.BootstrapKeyCreateRequest,
-    db: Session = Depends(get_db),
-    admin_key: str = admin_api_key,
+async def create_bootstrap_key(
+        key_data: schemas.BootstrapKeyCreateRequest,
+        db: SessionDep,
 ):
     """
     Creates one or more new bootstrap keys.
 
-    - `key`: A new, secure key is generated automatically.
+    - `raw_key`: A new, secure key is generated automatically.
     - `key_hash`: A hash of the key is stored in the DB.
     - `key_hint`: The last 4 chars of the key are stored for identification.
 
     **The raw key is returned *only* at creation time.** It cannot be
     retrieved later.
     """
-    raw_key = secrets.token_urlsafe(32)
-    key_hash = security.get_password_hash(raw_key)
-    key_hint = raw_key[-4:]
-
-    expiration_date = None
-    if key_data.expires_in_days:
-        expiration_date = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
-            days=key_data.expires_in_days
+    try:
+        db_key, raw_key = await create_key(db, key_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create bootstrap key: {str(e)}",
         )
-
-    db_key = models.BootstrapKey(
-        key_hash=key_hash, key_hint=key_hint, group=key_data.group, expiration_date=expiration_date
-    )
-    db.add(db_key)
-    db.commit()
-    db.refresh(db_key)
 
     return schemas.BootstrapKeyCreateResponse(
         id=db_key.id,
@@ -72,14 +59,19 @@ def create_bootstrap_key(
     tags=["Admin"],
     summary="Admin: List all bootstrap keys.",
 )
-def list_bootstrap_keys(
-    skip: int = 0, limit: int = 100, db: Session = Depends(get_db), admin_key: str = admin_api_key
+async def list_bootstrap_keys(
+        pagination: PaginationDep,
+        db: SessionDep,
 ):
     """
     Lists all bootstrap keys in the database.
     Does *not* return the raw key or hash.
     """
-    keys = db.query(models.BootstrapKey).offset(skip).limit(limit).all()
+    try:
+        keys = await get_keys(db, pagination)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to list keys: {str(e)}")
+
     return keys
 
 
@@ -89,60 +81,48 @@ def list_bootstrap_keys(
     tags=["Admin"],
     summary="Admin: Delete a bootstrap key.",
 )
-def delete_bootstrap_key(
-    key_id: int, db: Session = Depends(get_db), admin_key: str = admin_api_key
-):
+async def delete_bootstrap_key(key_id: int, db: SessionDep):
     """
     Deletes a bootstrap key from the database by its ID.
     This permanently revokes the key.
     """
-    db_key = db.query(models.BootstrapKey).filter(models.BootstrapKey.id == key_id).first()
-    if not db_key:
-        raise HTTPException(status_code=404, detail="Key not found")
-
-    db.delete(db_key)
-    db.commit()
-    return None
-
-
-@boostrap_key_router.get(
-    "/admin/devices",
-    response_model=list[schemas.IotDevice],
-    tags=["Admin"],
-    summary="Admin: List provisioned devices from AWS IoT Core.",
-)
-async def list_iot_devices(admin_key: str = admin_api_key):
-    """
-    Acts as a proxy to AWS IoT Core to list all registered Things (devices).
-    """
     try:
-        devices = await aws_iot_client.list_provisioned_devices()
-        return devices
+        await delete_key(key_id, db)
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Key not found"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list devices from AWS: {str(e)}",
+            detail=f"Failed to delete key: {str(e)}",
         )
 
+    return None
 
-@boostrap_key_router.post(
-    "/admin/devices/revoke",
-    status_code=status.HTTP_204_NO_CONTENT,
+
+@boostrap_key_router.put(
+    "/admin/keys/{key_id}/activate",
+    response_model=schemas.BootstrapKeyInfo,
     tags=["Admin"],
-    summary="Admin: Revoke a device's certificate in AWS IoT Core.",
+    summary="Admin: Activate/Deactivate a bootstrap key.",
 )
-async def revoke_iot_certificate(
-    revoke_request: schemas.RevokeCertificateRequest, admin_key: str = admin_api_key
-):
+async def activate_bootstrap_key(key_status: BootstrapKeyUpdateRequest, db: SessionDep):
     """
-    Revokes a device's certificate in AWS IoT Core.
-    This permanently blocks the device from authenticating with the ALB.
+    Activates or deactivates a bootstrap key by its ID.
+
+    > Temporarily deactivating a key will block any device using it from registering.
     """
+
     try:
-        await aws_iot_client.revoke_device_certificate(certificate_id=revoke_request.certificate_id)
+        key = await update_key_status(key_status, db)
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Key not found"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to revoke certificate: {str(e)}",
+            detail=f"Failed to update key: {str(e)}",
         )
-    return None
+    return key

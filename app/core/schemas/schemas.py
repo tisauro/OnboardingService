@@ -2,6 +2,7 @@ import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+
 # ==============================================================================
 # Bootstrap Key Schemas (Admin)
 # ==============================================================================
@@ -42,6 +43,11 @@ class BootstrapKeyInfo(BaseModel):
     created_date: datetime.datetime
     expiration_date: datetime.datetime | None
     is_active: bool
+
+
+class BootstrapKeyUpdateRequest(BaseModel):
+    key_id: int
+    activation_flag: bool
 
 
 # ==============================================================================

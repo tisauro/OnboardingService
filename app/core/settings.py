@@ -2,8 +2,8 @@ import os
 from functools import lru_cache
 from typing import Any, Optional
 
-from pydantic import PostgresDsn, ValidationInfo, field_validator
-from pydantic_settings import BaseSettings, SecretStr, SettingsConfigDict
+from pydantic import PostgresDsn, SecretStr, ValidationInfo, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
@@ -39,13 +39,13 @@ class Settings(BaseSettings):
             return v
         # print("Creating SQLALCHEMY_DATABASE_URI from env variables ...")
         return PostgresDsn.build(
-            scheme="postgresql+psycopg2",
+            scheme="postgresql+asyncpg",
             host=values.data.get("postgres_host"),
             port=values.data.get("postgres_port"),
             username=values.data.get("postgres_user"),
             password=values.data.get("postgres_password").get_secret_value(),
             path=f"{values.data.get('postgres_db') or ''}",
-            query=f"sslmode={values.data.get('postgres_sslmode')}",
+            # query=f"sslmode={values.data.get('postgres_sslmode')}",
         )
 
 

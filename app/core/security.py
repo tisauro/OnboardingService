@@ -3,7 +3,8 @@ import datetime
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
 from passlib.context import CryptContext
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.core.db import models
 from app.core.settings import Settings, get_settings
@@ -44,7 +45,7 @@ def get_admin_api_key(
 # --- Device Security ---
 
 
-def validate_bootstrap_key(db: Session, key: str) -> models.BootstrapKey | None:
+async def validate_bootstrap_key(db: AsyncSession, key: str) -> models.BootstrapKey | None:
     """
     Validates a device's bootstrap key.
 
@@ -55,7 +56,8 @@ def validate_bootstrap_key(db: Session, key: str) -> models.BootstrapKey | None:
     # all stored hashes. For a massive fleet, a different lookup
     # (e.g., using a key hint) might be needed, but this is the most secure.
 
-    keys = db.query(models.BootstrapKey).filter(models.BootstrapKey.is_active).all()
+    result = await db.execute(select(models.BootstrapKey).filter(models.BootstrapKey.is_active))
+    keys = result.scalars().all()
 
     for db_key in keys:
         if verify_password(key, db_key.key_hash):

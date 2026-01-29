@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_db
 from app.core import aws_iot_client, security
-from app.core.db.database import get_db
 from app.core.schemas import schemas
 from app.core.settings import Settings, get_settings
 
@@ -21,7 +21,7 @@ registration_router = APIRouter()
 async def register_device(
     registration_data: schemas.DeviceRegistrationRequest,
     x_api_key: str = Header(..., description="The device's unique bootstrap API key"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
     """
@@ -39,7 +39,7 @@ async def register_device(
     6.  Return the new certificate and private key to the device.
     """
 
-    db_key = security.validate_bootstrap_key(db, x_api_key)
+    db_key = await security.validate_bootstrap_key(db, x_api_key)
 
     if not db_key:
         raise HTTPException(
@@ -59,6 +59,6 @@ async def register_device(
 
     # Deactivate the key to prevent re-use
     db_key.is_active = False
-    db.commit()
+    await db.commit()
 
     return provision_data

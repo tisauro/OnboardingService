@@ -24,7 +24,11 @@ target_metadata = Base.metadata
 
 def get_url():
     settings = get_settings()
-    return settings.sqlalchemy_postgres_uri.unicode_string()
+    url = settings.sqlalchemy_postgres_uri.unicode_string()
+    # Alembic usually needs a sync driver, so we force it back to psycopg2 for migrations
+    if url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    return url
 
 
 # other values from the config, defined by the needs of env.py,
