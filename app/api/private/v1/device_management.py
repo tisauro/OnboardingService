@@ -1,8 +1,10 @@
+from fastapi import APIRouter, HTTPException, status
+
 from app.core import aws_iot_client
 from app.core.schemas import schemas
-from fastapi import APIRouter, Depends, HTTPException, status
 
 device_management_router = APIRouter()
+
 
 @device_management_router.get(
     "/admin/devices",
@@ -30,9 +32,7 @@ async def list_iot_devices():
     tags=["Admin"],
     summary="Admin: Revoke a device's certificate in AWS IoT Core.",
 )
-async def revoke_iot_certificate(
-    revoke_request: schemas.RevokeCertificateRequest
-):
+async def revoke_iot_certificate(revoke_request: schemas.RevokeCertificateRequest):
     """
     Revokes a device's certificate in AWS IoT Core.
     This permanently blocks the device from authenticating with the ALB.

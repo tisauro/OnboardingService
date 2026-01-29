@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 
 from app.core.db.database import Base
 
@@ -31,7 +31,7 @@ class BootstrapKey(Base):
 
     is_active = Column(Boolean, default=True, nullable=False)
 
-    __table_args__ = (
-        Index("ix_bootstrap_keys_group", "group"),
-        Index("ix_bootstrap_keys_is_active", "is_active"),
-    )
+    # __table_args__ = (
+    #     Index("ix_bootstrap_keys_group", "group"),
+    #     Index("ix_bootstrap_keys_is_active", "is_active"),
+    # )

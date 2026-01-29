@@ -1,10 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy.future import select
 
-from app.api.deps import SessionDep, PaginationDep
-from app.core import security
-from app.core.crud.bootstrap_keys import create_key, get_keys, delete_key, update_key_status
-from app.core.db import models
+from app.api.deps import PaginationDep, SessionDep
+from app.core.crud.bootstrap_keys import create_key, delete_key, get_keys, update_key_status
 from app.core.schemas import schemas
 from app.core.schemas.schemas import BootstrapKeyUpdateRequest
 
@@ -22,8 +19,8 @@ boostrap_key_router = APIRouter()
     summary="Admin: Create a new bootstrap key.",
 )
 async def create_bootstrap_key(
-        key_data: schemas.BootstrapKeyCreateRequest,
-        db: SessionDep,
+    key_data: schemas.BootstrapKeyCreateRequest,
+    db: SessionDep,
 ):
     """
     Creates one or more new bootstrap keys.
@@ -60,8 +57,8 @@ async def create_bootstrap_key(
     summary="Admin: List all bootstrap keys.",
 )
 async def list_bootstrap_keys(
-        pagination: PaginationDep,
-        db: SessionDep,
+    pagination: PaginationDep,
+    db: SessionDep,
 ):
     """
     Lists all bootstrap keys in the database.
@@ -70,7 +67,10 @@ async def list_bootstrap_keys(
     try:
         keys = await get_keys(db, pagination)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to list keys: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list keys: {str(e)}",
+        )
 
     return keys
 
@@ -89,9 +89,7 @@ async def delete_bootstrap_key(key_id: int, db: SessionDep):
     try:
         await delete_key(key_id, db)
     except KeyError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Key not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Key not found")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -117,9 +115,7 @@ async def activate_bootstrap_key(key_status: BootstrapKeyUpdateRequest, db: Sess
     try:
         key = await update_key_status(key_status, db)
     except KeyError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Key not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Key not found")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

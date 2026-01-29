@@ -2,8 +2,8 @@ import datetime
 import secrets
 
 from sqlalchemy import delete
-from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from app.api.deps import PaginationDep
 from app.core import security
@@ -12,7 +12,9 @@ from app.core.schemas import schemas
 from app.core.schemas.schemas import BootstrapKeyUpdateRequest
 
 
-async def create_key(db: AsyncSession, key_data: schemas.BootstrapKeyCreateRequest) -> tuple[models.BootstrapKey, str]:
+async def create_key(
+    db: AsyncSession, key_data: schemas.BootstrapKeyCreateRequest
+) -> tuple[models.BootstrapKey, str]:
     if key_data.expires_in_days:
         expires_in_days = key_data.expires_in_days
     else:
@@ -41,7 +43,9 @@ async def create_key(db: AsyncSession, key_data: schemas.BootstrapKeyCreateReque
 
 async def get_keys(db: AsyncSession, pagination: PaginationDep):
     try:
-        result = await db.execute(select(models.BootstrapKey).offset(pagination["skip"]).limit(pagination["limit"]))
+        result = await db.execute(
+            select(models.BootstrapKey).offset(pagination["skip"]).limit(pagination["limit"])
+        )
         keys = result.scalars().all()
     except Exception as e:
         raise e
@@ -62,7 +66,9 @@ async def delete_key(key_id: int, db: AsyncSession) -> None:
         raise e
 
 
-async def update_key_status(key_status: BootstrapKeyUpdateRequest, db: AsyncSession)-> models.BootstrapKey:
+async def update_key_status(
+    key_status: BootstrapKeyUpdateRequest, db: AsyncSession
+) -> models.BootstrapKey:
     try:
         db_key = await db.get(models.BootstrapKey, key_status.key_id)
         if not db_key:
@@ -74,4 +80,3 @@ async def update_key_status(key_status: BootstrapKeyUpdateRequest, db: AsyncSess
     except Exception as e:
         await db.rollback()
         raise e
-
