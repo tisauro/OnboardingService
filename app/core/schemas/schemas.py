@@ -45,7 +45,7 @@ class BootstrapKeyInfo(BaseModel):
 
 
 class BootstrapKeyUpdateRequest(BaseModel):
-    key_id: int
+    # key_id: int
     activation_flag: bool
 
 

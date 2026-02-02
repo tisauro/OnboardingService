@@ -12,6 +12,10 @@ from app.core.schemas import schemas
 from app.core.schemas.schemas import BootstrapKeyUpdateRequest
 
 
+class BootstrapKeyNotFoundError(Exception):
+    pass
+
+
 async def create_key(
     db: AsyncSession, key_data: schemas.BootstrapKeyCreateRequest
 ) -> tuple[models.BootstrapKey, str]:
@@ -31,52 +35,37 @@ async def create_key(
     db_key = models.BootstrapKey(
         key_hash=key_hash, key_hint=key_hint, group=key_data.group, expiration_date=expiration_date
     )
-    try:
-        db.add(db_key)
-        await db.commit()
-        await db.refresh(db_key)
-    except Exception as e:
-        await db.rollback()
-        raise e
+    db.add(db_key)
+    await db.commit()
     return db_key, raw_key
 
 
 async def get_keys(db: AsyncSession, pagination: PaginationDep):
-    try:
-        result = await db.execute(
-            select(models.BootstrapKey).offset(pagination["skip"]).limit(pagination["limit"])
-        )
-        keys = result.scalars().all()
-    except Exception as e:
-        raise e
+    result = await db.execute(
+        select(models.BootstrapKey)
+        .order_by(models.BootstrapKey.id.desc())
+        .offset(pagination["skip"])
+        .limit(pagination["limit"])
+    )
+    keys = result.scalars().all()
     return keys
 
 
 async def delete_key(key_id: int, db: AsyncSession) -> None:
-    try:
-        result = await db.execute(
-            delete(models.BootstrapKey).where(models.BootstrapKey.id == key_id)
-        )
-        if result.rowcount == 0:
-            raise KeyError(f"Key with id {key_id} not found")
+    result = await db.execute(delete(models.BootstrapKey).where(models.BootstrapKey.id == key_id))
+    if result.rowcount == 0:
+        raise BootstrapKeyNotFoundError(f"Key with id {key_id} not found")
 
-        await db.commit()
-    except Exception as e:
-        await db.rollback()
-        raise e
+    await db.commit()
 
 
 async def update_key_status(
-    key_status: BootstrapKeyUpdateRequest, db: AsyncSession
+    key_id: int, key_status: BootstrapKeyUpdateRequest, db: AsyncSession
 ) -> models.BootstrapKey:
-    try:
-        db_key = await db.get(models.BootstrapKey, key_status.key_id)
-        if not db_key:
-            raise KeyError(f"Key with id {key_status.key_id} not found")
-        db_key.is_active = key_status.activation_flag
-        await db.commit()
-        await db.refresh(db_key)
-        return db_key
-    except Exception as e:
-        await db.rollback()
-        raise e
+    db_key = await db.get(models.BootstrapKey, key_id)
+    if not db_key:
+        raise BootstrapKeyNotFoundError(f"Key with id {key_id} not found")
+    db_key.is_active = key_status.activation_flag
+    await db.commit()
+    await db.refresh(db_key)
+    return db_key

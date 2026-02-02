@@ -1,7 +1,13 @@
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import PaginationDep, SessionDep
-from app.core.crud.bootstrap_keys import create_key, delete_key, get_keys, update_key_status
+from app.core.crud.bootstrap_keys import (
+    BootstrapKeyNotFoundError,
+    create_key,
+    delete_key,
+    get_keys,
+    update_key_status,
+)
 from app.core.schemas import schemas
 from app.core.schemas.schemas import BootstrapKeyUpdateRequest
 
@@ -88,7 +94,7 @@ async def delete_bootstrap_key(key_id: int, db: SessionDep):
     """
     try:
         await delete_key(key_id, db)
-    except KeyError:
+    except BootstrapKeyNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Key not found")
     except Exception as e:
         raise HTTPException(
@@ -100,12 +106,14 @@ async def delete_bootstrap_key(key_id: int, db: SessionDep):
 
 
 @boostrap_key_router.put(
-    "/admin/keys/{key_id}/activate",
+    "/admin/keys/{key_id}",
     response_model=schemas.BootstrapKeyInfo,
     tags=["Admin"],
     summary="Admin: Activate/Deactivate a bootstrap key.",
 )
-async def activate_bootstrap_key(key_status: BootstrapKeyUpdateRequest, db: SessionDep):
+async def activate_bootstrap_key(
+    key_id: int, key_status: BootstrapKeyUpdateRequest, db: SessionDep
+):
     """
     Activates or deactivates a bootstrap key by its ID.
 
@@ -113,8 +121,8 @@ async def activate_bootstrap_key(key_status: BootstrapKeyUpdateRequest, db: Sess
     """
 
     try:
-        key = await update_key_status(key_status, db)
-    except KeyError:
+        key = await update_key_status(key_id, key_status, db)
+    except BootstrapKeyNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Key not found")
     except Exception as e:
         raise HTTPException(
