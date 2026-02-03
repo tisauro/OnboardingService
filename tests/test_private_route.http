@@ -1,0 +1,7 @@
+# Test your FastAPI endpoints
+
+POST http://127.0.0.1:8080/private/v1/admin/keys
+Accept: application/json
+Content-Type: application/json
+
+{}

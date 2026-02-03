@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "OnboardingService"
+version = "0.1.0"
+description = "FastApi API to facilitate IoT devices Onboarding"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.128.0",
+    "pydantic-settings>=2.12.0",
+    "SQLAlchemy>=2.0.45",
+    "alembic>=1.18.0",
+    "psycopg2>=2.9.9",
+    "asyncpg>=0.29.0",
+    "uvicorn>=0.40.0",
+    "python-dotenv>=1.2.1",
+    "passlib[bcrypt]>=1.7.4",
+    "bcrypt<4.0.0",
+    "pydantic>=2.12.5",
+    "PyYAML>=6.0.3"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.1",
+    "ruff>=0.14.5",
+    "pytest-asyncio>=1.3.0",
+    "httpx>=0.28.1"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "app"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N"]
+ignore = []
