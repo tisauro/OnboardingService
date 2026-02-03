@@ -1,21 +1,37 @@
-### Todo:
-- implement key management
-- sort out docker container
+# OnboardingService — IoT Device Onboarding & Provisioning Service
+
+OnboardingService is a FastAPI-based backend that manages secure first-boot onboarding for IoT devices and provides an admin API to operate the provisioning lifecycle in AWS IoT Core.
+
+At a glance, the service:
+- Exposes a public device registration endpoint where a device presents a factory-installed bootstrap API key to obtain its own X.509 certificate and private key.
+- Creates/attaches an AWS IoT Thing and policy, returning credentials to the device on first registration.
+- Offers private admin endpoints to manage bootstrap keys and to view/revoke provisioned devices.
+- Uses PostgreSQL for persistence and Alembic for database migrations.
+
+## Objectives
+- Ensure secure, one-time device onboarding using time-bound, revocable bootstrap keys.
+- Centralize key lifecycle management (create, list, activate/deactivate, delete) for manufacturing batches or groups.
+- Automate AWS IoT provisioning steps (Thing creation, certificate issuance/attachment, policy attachment).
+- Provide operators with visibility and controls (list devices, revoke certificates) without direct AWS console access.
+- Support repeatable deployments via configuration (`.env`) and migrations (Alembic).
+
+## High-level Architecture
+- API Layer: FastAPI application with separate public and private routers.
+  - Public: device self-registration using a bootstrap key (`/public/v1/register`).
+  - Private: admin management of bootstrap keys and devices (`/private/v1/admin/...`).
+- Persistence: PostgreSQL accessed asynchronously; schema managed with Alembic.
+- Cloud Integration: AWS IoT Core for device identity, certificates, and policies.
+- Configuration: Pydantic `Settings` loaded from `.env` (see `app/core/settings.py`).
 
 
-## alembic commands:
+## Alembic commands
 
-Full documentation can be found in [here](https://alembic.sqlalchemy.org/en/latest/):
+Full documentation can be found [here](https://alembic.sqlalchemy.org/en/latest/):
 
-- init script to be run only once: ```alembic init alembic``` as part of the configuration we change the alembic.ini
-  file
-  specifying the file template name as: ```file_template = %%(epoch)s_%%(slug)s```
-
-- create a migration script: ```alembic revision --autogenerate -m "create account table"```
-- running migration: ```alembic upgrade head```
-- partial revision identifier: ```alembic upgrade ae1``` only part of the revision no can be specified as far as it is
-  enough to identify a specific revision.
-- relative migration identifiers: ```alembic upgrade +2```
-- getting information: ```alembic current``` and ```alembic history --verbose```
-- downgrading: ```alembic downgrade base``` base is a keyword to downgrade to the beginning otherwise
-  run ```alembic downgrade revision_no```
+- Init (run once): `alembic init alembic` and in `alembic.ini` set `file_template = %%(epoch)s_%%(slug)s`.
+- Create a migration: `alembic revision --autogenerate -m "create account table"`
+- Apply latest: `alembic upgrade head`
+- Partial revision identifier: `alembic upgrade ae1` (sufficiently unique prefix)
+- Relative migration identifiers: `alembic upgrade +2`
+- Info: `alembic current` and `alembic history --verbose`
+- Downgrade: `alembic downgrade base` or `alembic downgrade <revision>`
