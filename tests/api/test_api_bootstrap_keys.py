@@ -1,8 +1,9 @@
 import random
 import string
+from datetime import datetime, timedelta, timezone
 
 import pytest
-from datetime import datetime, timedelta, timezone
+
 from app.core.db.models import BootstrapKey
 
 
@@ -24,24 +25,28 @@ async def test_delete_key_not_found(client):
 class TestCreateKeyValidation:
     @pytest.mark.parametrize("days", [-1, 0, 366])
     async def test_create_key_validation_error(self, client, days):
-        resp = await client.post("/private/v1/admin/keys", json={"group": "test", "expires_in_days": days})
+        resp = await client.post(
+            "/private/v1/admin/keys", json={"group": "test", "expires_in_days": days}
+        )
         assert resp.status_code == 422
 
     async def test_create_key_validation_default(self, client):
         resp = await client.post("/private/v1/admin/keys", json={"group": "test"})
         assert resp.status_code == 200
         assert resp.json()["expiration_date"] is not None
-        created_date = datetime.fromisoformat(resp.json()['created_date'])
-        expiration_date = datetime.fromisoformat(resp.json()['expiration_date'])
+        created_date = datetime.fromisoformat(resp.json()["created_date"])
+        expiration_date = datetime.fromisoformat(resp.json()["expiration_date"])
         delta = expiration_date - created_date
         assert timedelta(days=29, hours=23) <= delta <= timedelta(days=30, hours=1)
 
     async def test_create_key_validation_valid_value(self, client):
-        resp = await client.post("/private/v1/admin/keys", json={"group": "test", "expires_in_days": 10})
+        resp = await client.post(
+            "/private/v1/admin/keys", json={"group": "test", "expires_in_days": 10}
+        )
         assert resp.status_code == 200
         assert resp.json()["expiration_date"] is not None
-        created_date = datetime.fromisoformat(resp.json()['created_date'])
-        expiration_date = datetime.fromisoformat(resp.json()['expiration_date'])
+        created_date = datetime.fromisoformat(resp.json()["created_date"])
+        expiration_date = datetime.fromisoformat(resp.json()["expiration_date"])
         delta = expiration_date - created_date
         assert timedelta(days=9, hours=23) <= delta <= timedelta(days=10, hours=1)
 
@@ -67,29 +72,43 @@ class TestUpdateKeyEndpoint:
     async def test_update_key_expired(self, client, db_session):
         created = datetime.now(tz=timezone.utc) - timedelta(days=31)
         expiration_date = created - timedelta(days=10)
-        rnd_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=64))
+        rnd_str = "".join(random.choices(string.ascii_uppercase + string.digits, k=64))
 
-        bootstrap_key = BootstrapKey(key_hash=rnd_str[:32],
-                                     key_hint=rnd_str[:4], group="test",
-                                     is_active=False, created_date=created, expiration_date=expiration_date)
+        bootstrap_key = BootstrapKey(
+            key_hash=rnd_str[:32],
+            key_hint=rnd_str[:4],
+            group="test",
+            is_active=False,
+            created_date=created,
+            expiration_date=expiration_date,
+        )
         db_session.add(bootstrap_key)
         await db_session.commit()
         await db_session.refresh(bootstrap_key)
-        resp = await client.put(f"/private/v1/admin/keys/{bootstrap_key.id}", json={"activation_flag": True})
+        resp = await client.put(
+            f"/private/v1/admin/keys/{bootstrap_key.id}", json={"activation_flag": True}
+        )
         assert resp.status_code == 400
         assert resp.json()["detail"] == "Key has expired"
 
     async def test_update_key_expired_deactivate(self, client, db_session):
         created = datetime.now(tz=timezone.utc) - timedelta(days=31)
         expiration_date = created - timedelta(days=10)
-        rnd_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=64))
-        bootstrap_key = BootstrapKey(key_hash=rnd_str[:32],
-                                     key_hint=rnd_str[:4], group="test",
-                                     is_active=True, created_date=created, expiration_date=expiration_date)
+        rnd_str = "".join(random.choices(string.ascii_uppercase + string.digits, k=64))
+        bootstrap_key = BootstrapKey(
+            key_hash=rnd_str[:32],
+            key_hint=rnd_str[:4],
+            group="test",
+            is_active=True,
+            created_date=created,
+            expiration_date=expiration_date,
+        )
         db_session.add(bootstrap_key)
         await db_session.commit()
         await db_session.refresh(bootstrap_key)
-        resp = await client.put(f"/private/v1/admin/keys/{bootstrap_key.id}", json={"activation_flag": False})
+        resp = await client.put(
+            f"/private/v1/admin/keys/{bootstrap_key.id}", json={"activation_flag": False}
+        )
         assert resp.status_code == 200
         assert resp.json()["is_active"] is False
         assert resp.json()["id"] == bootstrap_key.id

@@ -115,7 +115,7 @@ class TestBootstrapKeyCRUDLogic:
         update_request = BootstrapKeyUpdateRequest(activation_flag=False)
 
         # Call function
-        result = await update_key_status(1,update_request, db)
+        result = await update_key_status(1, update_request, db)
 
         # Verify
         assert result.is_active is False

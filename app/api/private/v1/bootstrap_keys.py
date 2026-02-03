@@ -2,11 +2,12 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import PaginationDep, SessionDep
 from app.core.crud.bootstrap_keys import (
+    BootstrapKeyExpiredError,
     BootstrapKeyNotFoundError,
     create_key,
     delete_key,
     get_keys,
-    update_key_status, BootstrapKeyExpiredError,
+    update_key_status,
 )
 from app.core.schemas import schemas
 from app.core.schemas.schemas import BootstrapKeyUpdateRequest

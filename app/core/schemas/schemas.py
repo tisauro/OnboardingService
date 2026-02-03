@@ -2,7 +2,6 @@ import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 # ==============================================================================
 # Bootstrap Key Schemas (Admin)
 # ==============================================================================
