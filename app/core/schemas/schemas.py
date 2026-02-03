@@ -1,6 +1,7 @@
 import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
 
 # ==============================================================================
 # Bootstrap Key Schemas (Admin)
@@ -13,7 +14,7 @@ class BootstrapKeyCreateRequest(BaseModel):
     """
 
     group: str | None = None
-    expires_in_days: int | None = None
+    expires_in_days: int = Field(default=30, ge=1, le=365)
 
 
 class BootstrapKeyCreateResponse(BaseModel):
@@ -26,7 +27,8 @@ class BootstrapKeyCreateResponse(BaseModel):
     key_hint: str
     group: str | None
     created_date: datetime.datetime
-    expiration_date: datetime.datetime | None
+    expiration_date: datetime.datetime
+    is_active: bool = True
 
 
 class BootstrapKeyInfo(BaseModel):

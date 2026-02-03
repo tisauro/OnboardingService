@@ -6,7 +6,7 @@ from app.core.crud.bootstrap_keys import (
     create_key,
     delete_key,
     get_keys,
-    update_key_status,
+    update_key_status, BootstrapKeyExpiredError,
 )
 from app.core.schemas import schemas
 from app.core.schemas.schemas import BootstrapKeyUpdateRequest
@@ -124,6 +124,8 @@ async def activate_bootstrap_key(
         key = await update_key_status(key_id, key_status, db)
     except BootstrapKeyNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Key not found")
+    except BootstrapKeyExpiredError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Key has expired")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

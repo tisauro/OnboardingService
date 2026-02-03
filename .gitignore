@@ -5,3 +5,4 @@
 /FastAPI_Blueprint.egg-info/
 /OnboardingService.egg-info/
 /.env
+/.coverage
