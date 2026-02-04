@@ -1,9 +1,13 @@
+import secrets
+from datetime import datetime, timedelta, timezone
 from unittest import mock
 from unittest.mock import AsyncMock
 
 import pytest
 
+from app.core.db import models
 from app.core.schemas import schemas
+from app.core.security import get_password_hash, validate_bootstrap_key
 
 
 @mock.patch("app.api.public.v1.registration.security")
@@ -84,11 +88,53 @@ class TestRegistrationEndpointApi:
 
 @pytest.mark.asyncio
 class TestRegistrationEndpointSecurity:
-    async def test_registration_device_key_expired(self, db_session):
-        pass
+    @staticmethod
+    async def create_bootstrap_key(
+        db_session, is_active=True, days_until_expiry=5
+    ) -> tuple[models.BootstrapKey, str]:
+        """Helper to create bootstrap key and return (db_key, raw_key)"""
+        created_date = datetime.now(timezone.utc)
+        expiration_date = created_date + timedelta(days=days_until_expiry)
+
+        raw_key = secrets.token_urlsafe(32)
+        key_hash = get_password_hash(raw_key)
+        key_hint = raw_key[-4:]
+
+        db_key = models.BootstrapKey(
+            key_hash=key_hash,
+            key_hint=key_hint,
+            group="test_group",
+            created_date=created_date,
+            expiration_date=expiration_date,
+            is_active=is_active,
+        )
+        db_session.add(db_key)
+        await db_session.commit()
+        return db_key, raw_key
+
+    async def test_registration_device_key_valid(self, db_session):
+        _, raw_key = await self.create_bootstrap_key(db_session)
+        assert await validate_bootstrap_key(db_session, raw_key)
 
     async def test_registration_device_key_revoked(self, db_session):
-        pass
+        _, raw_key = await self.create_bootstrap_key(db_session, is_active=False)
+        assert not await validate_bootstrap_key(db_session, raw_key)
 
-    async def test_registration_device_key_not_found(self, client):
-        pass
+    async def test_registration_device_key_expired(self, db_session):
+        _, raw_key = await self.create_bootstrap_key(db_session, days_until_expiry=-5)
+        assert not await validate_bootstrap_key(db_session, raw_key)
+
+    async def test_registration_device_key_expired_and_revoked(self, db_session):
+        _, raw_key = await self.create_bootstrap_key(
+            db_session, is_active=False, days_until_expiry=-5
+        )
+        assert not await validate_bootstrap_key(db_session, raw_key)
+
+    async def test_registration_device_key_not_found(self, db_session):
+        raw_key = "Not a valid key"
+        assert not await validate_bootstrap_key(db_session, raw_key)
+
+    async def test_registration_device_key_wrong_hash(self, db_session):
+        _, _ = await self.create_bootstrap_key(db_session)
+        wrong_key = secrets.token_urlsafe(32)
+        assert not await validate_bootstrap_key(db_session, wrong_key)

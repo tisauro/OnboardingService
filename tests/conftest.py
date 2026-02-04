@@ -25,7 +25,7 @@ async def test_engine():
     Create/drop the test DB once per test run (fast).
     """
     await create_database_async(TEST_DATABASE_URL)
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False, future=True, poolclass=NullPool)
+    engine = create_async_engine(TEST_DATABASE_URL, echo=True, future=True, poolclass=NullPool)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

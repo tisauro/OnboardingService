@@ -30,11 +30,12 @@ async def validate_bootstrap_key(db: AsyncSession, key: str) -> bool:
     Iterates through stored hashes to find a match.
     Checks if the key is active and not expired.
     """
-    # This is a simple (but not highly performant) way to check against
-    # all stored hashes. For a massive fleet, a different lookup
-    # (e.g., using a key hint) might be needed, but this is the most secure.
 
-    result = await db.execute(select(models.BootstrapKey).filter(models.BootstrapKey.is_active))
+    result = await db.execute(
+        select(models.BootstrapKey)
+        .filter(models.BootstrapKey.is_active)
+        .filter(models.BootstrapKey.key_hint == key[-4:])
+    )
     keys = result.scalars().all()
 
     for db_key in keys:
