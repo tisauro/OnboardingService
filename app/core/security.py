@@ -1,16 +1,10 @@
 import datetime
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import APIKeyHeader
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.core.db import models
-from app.core.settings import Settings, get_settings
-
-# Security scheme for admin endpoints
-admin_api_key_header = APIKeyHeader(name="x-admin-api-key")
 
 # Password hashing context for bootstrap keys
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -26,26 +20,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-# --- Admin Security ---
-
-
-def get_admin_api_key(
-    api_key: str = Depends(admin_api_key_header), settings: Settings = Depends(get_settings)
-) -> str:
-    """
-    FastAPI dependency that validates the admin API key.
-    """
-    if api_key == settings.ADMIN_API_KEY:
-        return api_key
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing admin API key."
-    )
-
-
 # --- Device Security ---
 
 
-async def validate_bootstrap_key(db: AsyncSession, key: str) -> models.BootstrapKey | None:
+async def validate_bootstrap_key(db: AsyncSession, key: str) -> bool:
     """
     Validates a device's bootstrap key.
 
@@ -66,10 +44,10 @@ async def validate_bootstrap_key(db: AsyncSession, key: str) -> models.Bootstrap
                 datetime.timezone.utc
             ):
                 # Key is expired
-                return None
+                return False
 
             # Key is valid, active, and not expired
-            return db_key
+            return True
 
     # No key matched
-    return None
+    return False
