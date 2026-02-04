@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     sqlalchemy_postgres_uri: Optional[PostgresDsn] = None
 
     @field_validator("sqlalchemy_postgres_uri", mode="after")
-    def assemble_postgres_connection(cls, v: Optional[str], values: ValidationInfo) -> Any:
+    def assemble_postgres_connection(cls, v: Optional[str], values: ValidationInfo) -> Any:  # noqa: N805
         if isinstance(v, str):
             # print("Loading SQLALCHEMY_DATABASE_URI from ...")
             return v

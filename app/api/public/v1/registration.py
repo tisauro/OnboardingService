@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import APIKeyHeader
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
@@ -11,6 +12,8 @@ from app.core.settings import Settings, get_settings
 # ==============================================================================
 registration_router = APIRouter()
 
+api_key_header = APIKeyHeader(name="X-Api-Key", description="The device's unique bootstrap API key")
+
 
 @registration_router.post(
     "/register",
@@ -20,7 +23,7 @@ registration_router = APIRouter()
 )
 async def register_device(
     registration_data: schemas.DeviceRegistrationRequest,
-    x_api_key: str = Header(..., description="The device's unique bootstrap API key"),
+    x_api_key: str = Depends(api_key_header),
     db: AsyncSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
@@ -35,8 +38,7 @@ async def register_device(
     2.  Create an IoT Thing with the `device_id`.
     3.  Attach the certificate to the Thing.
     4.  Attach the default IoT Policy to the certificate.
-    5.  Deactivate the bootstrap key to prevent re-use.
-    6.  Return the new certificate and private key to the device.
+    5.  Return the new certificate and private key to the device.
     """
 
     db_key = await security.validate_bootstrap_key(db, x_api_key)
@@ -56,9 +58,4 @@ async def register_device(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to provision device in AWS: {str(e)}",
         )
-
-    # Deactivate the key to prevent re-use
-    db_key.is_active = False
-    await db.commit()
-
     return provision_data
