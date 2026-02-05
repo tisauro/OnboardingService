@@ -31,6 +31,9 @@ async def validate_bootstrap_key(db: AsyncSession, key: str) -> bool:
     Checks if the key is active and not expired.
     """
 
+    if not key or len(key) < 4:
+        return False
+
     result = await db.execute(
         select(models.BootstrapKey)
         .filter(models.BootstrapKey.is_active)
@@ -39,11 +42,16 @@ async def validate_bootstrap_key(db: AsyncSession, key: str) -> bool:
     keys = result.scalars().all()
 
     for db_key in keys:
-        if verify_password(key, db_key.key_hash):
+        try:
+            is_match = verify_password(key, db_key.key_hash)
+        except Exception:
+            continue
+        if is_match:
             # Found a match. Now check expiration.
-            if db_key.expiration_date and db_key.expiration_date < datetime.datetime.now(
-                datetime.timezone.utc
-            ):
+            expiration = db_key.expiration_date
+            if expiration.tzinfo is None:
+                expiration = expiration.replace(tzinfo=datetime.timezone.utc)
+            if expiration < datetime.datetime.now(datetime.timezone.utc):
                 # Key is expired
                 return False
 

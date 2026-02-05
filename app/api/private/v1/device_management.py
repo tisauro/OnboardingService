@@ -1,8 +1,11 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, status
 
 from app.core import aws_iot_client
 from app.core.schemas import schemas
 
+logger = logging.getLogger(__name__)
 device_management_router = APIRouter()
 
 
@@ -20,9 +23,10 @@ async def list_iot_devices():
         devices = await aws_iot_client.list_provisioned_devices()
         return devices
     except Exception as e:
+        logger.exception(f"Failed to list devices from AWS: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list devices from AWS: {str(e)}",
+            detail="Failed to list devices from AWS",
         )
 
 
@@ -40,8 +44,9 @@ async def revoke_iot_certificate(revoke_request: schemas.RevokeCertificateReques
     try:
         await aws_iot_client.revoke_device_certificate(certificate_id=revoke_request.certificate_id)
     except Exception as e:
+        logger.exception(f"Failed to revoke certificate: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to revoke certificate: {str(e)}",
+            detail="Failed to revoke certificate",
         )
-    return None
+    return

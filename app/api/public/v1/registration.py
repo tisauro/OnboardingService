@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +15,8 @@ from app.core.settings import Settings, get_settings
 registration_router = APIRouter()
 
 api_key_header = APIKeyHeader(name="X-Api-Key", description="The device's unique bootstrap API key")
+
+logger = logging.getLogger(__name__)
 
 
 @registration_router.post(
@@ -44,6 +48,10 @@ async def register_device(
     db_key = await security.validate_bootstrap_key(db, x_api_key)
 
     if not db_key:
+        logger.warning(
+            "Device registration failed: invalid bootstrap key for device_id=%s",
+            registration_data.device_id,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired bootstrap key."
         )
@@ -52,10 +60,15 @@ async def register_device(
         provision_data = await aws_iot_client.provision_device(
             device_id=registration_data.device_id, policy_name=settings.IOT_POLICY_NAME
         )
+        logger.warning(
+            "Device registration failed: invalid bootstrap key for device_id=%s",
+            registration_data.device_id,
+        )
     except Exception as e:
+        logger.exception(f"Failed to provision device: {str(e)}")
         # Catch potential AWS errors (e.g., Thing already exists, policy not found)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to provision device in AWS: {str(e)}",
+            detail="Failed to provision device in AWS",
         )
     return provision_data

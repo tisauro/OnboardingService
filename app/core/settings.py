@@ -1,6 +1,6 @@
 import os
 from functools import lru_cache
-from typing import Any, Optional
+from typing import Optional
 
 from pydantic import PostgresDsn, SecretStr, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -28,22 +28,21 @@ class Settings(BaseSettings):
 
     AWS_REGION: str = "eu-west-1"
     IOT_POLICY_NAME: str = ""
-    ADMIN_API_KEY: str = ""
 
     sqlalchemy_postgres_uri: Optional[PostgresDsn] = None
 
     @field_validator("sqlalchemy_postgres_uri", mode="after")
-    def assemble_postgres_connection(cls, v: Optional[str], values: ValidationInfo) -> Any:  # noqa: N805
-        if isinstance(v, str):
-            # print("Loading SQLALCHEMY_DATABASE_URI from ...")
+    def assemble_postgres_connection(
+        cls, v: Optional[PostgresDsn], values: ValidationInfo # noqa: N805
+    ) -> PostgresDsn:
+        if v is not None:
             return v
-        # print("Creating SQLALCHEMY_DATABASE_URI from env variables ...")
         return PostgresDsn.build(
             scheme="postgresql+asyncpg",
             host=values.data.get("postgres_host"),
             port=values.data.get("postgres_port"),
             username=values.data.get("postgres_user"),
-            password=values.data.get("postgres_password").get_secret_value(),
+            password=values.data.get("postgres_password", SecretStr("")).get_secret_value(),
             path=f"{values.data.get('postgres_db') or ''}",
             # query=f"sslmode={values.data.get('postgres_sslmode')}",
         )

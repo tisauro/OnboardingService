@@ -22,7 +22,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
-def get_url():
+def get_url() -> str:
     settings = get_settings()
     url = settings.sqlalchemy_postgres_uri.unicode_string()
     # Alembic usually needs a sync driver, so we force it back to psycopg2 for migrations

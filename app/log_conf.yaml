@@ -1,5 +1,5 @@
 version: 1
-disable_existing_loggers: False
+disable_existing_loggers: false
 formatters:
   default:
     # "()": uvicorn.logging.DefaultFormatter
@@ -21,14 +21,13 @@ loggers:
     level: INFO
     handlers:
       - default
-    propagate: no
+    propagate: false
   uvicorn.access:
     level: INFO
     handlers:
       - access
-    propagate: no
+    propagate: false
 root:
   level: DEBUG
   handlers:
     - default
-  propagate: no

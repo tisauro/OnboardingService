@@ -50,7 +50,6 @@ class TestRegistrationEndpointApi:
         assert resp.status_code == 401
         assert resp.json()["detail"] == "Invalid or expired bootstrap key."
         mocked_iot_client.provision_device.assert_not_called()
-        mocked_security.validate_bootstrap_key.assert_called_once()
         mocked_security.validate_bootstrap_key.assert_called_once_with(mock.ANY, "fake_api_key")
 
     async def test_registration_device_iot_client_error(
@@ -66,9 +65,7 @@ class TestRegistrationEndpointApi:
         )
         assert resp.status_code == 500
         detail = resp.json()["detail"]
-        assert "Failed to provision device in AWS:" in detail
-        mocked_iot_client.provision_device.assert_called_once()
-        mocked_security.validate_bootstrap_key.assert_called_once()
+        assert "Failed to provision device in AWS" in detail
         mocked_iot_client.provision_device.assert_called_once_with(
             device_id="fake_device_id", policy_name=mock.ANY
         )
@@ -103,7 +100,7 @@ class TestRegistrationEndpointSecurity:
         db_key = models.BootstrapKey(
             key_hash=key_hash,
             key_hint=key_hint,
-            group="test_group",
+            key_group="test_group",
             created_date=created_date,
             expiration_date=expiration_date,
             is_active=is_active,

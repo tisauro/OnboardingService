@@ -11,16 +11,17 @@ app = FastAPI(
     version="1.0",
 )
 
+settings = get_settings()
 app.include_router(base_router)
-app.include_router(public_router, prefix=get_settings().API_PUBLIC_V1_STR)
-app.include_router(private_router, prefix=get_settings().API_PRIVATE_V1_STR)
+app.include_router(public_router, prefix=settings.API_PUBLIC_V1_STR)
+app.include_router(private_router, prefix=settings.API_PRIVATE_V1_STR)
 
 
 if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "main:app",
+        "app.main:app",
         host="0.0.0.0",
         port=8080,
         reload=True,

@@ -1,8 +1,14 @@
 /.idea/
-.db/
+/.db/
 /.venv/
-*__pycache__*
+__pycache__/
 /FastAPI_Blueprint.egg-info/
 /OnboardingService.egg-info/
 /.env
 /.coverage
+*.pyc
+*.pyo
+*.py[cod]
+*.egg
+dist/
+build/

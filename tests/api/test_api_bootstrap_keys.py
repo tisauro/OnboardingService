@@ -69,22 +69,26 @@ class TestUpdateKeyEndpoint:
         assert resp.status_code == 404
         assert resp.json()["detail"] == "Key not found"
 
-    async def test_update_key_expired(self, client, db_session):
+    async def create_key(self, db_session, activation_flag: bool = True) -> dict:
         created = datetime.now(tz=timezone.utc) - timedelta(days=31)
-        expiration_date = created - timedelta(days=10)
+        expiration_date = created + timedelta(days=10)
         rnd_str = "".join(random.choices(string.ascii_uppercase + string.digits, k=64))
 
         bootstrap_key = BootstrapKey(
             key_hash=rnd_str[:32],
             key_hint=rnd_str[:4],
-            group="test",
-            is_active=False,
+            key_group="test",
+            is_active=activation_flag,
             created_date=created,
             expiration_date=expiration_date,
         )
         db_session.add(bootstrap_key)
         await db_session.commit()
         await db_session.refresh(bootstrap_key)
+        return bootstrap_key
+
+    async def test_update_key_expired(self, client, db_session):
+        bootstrap_key = await self.create_key(db_session, activation_flag=True)
         resp = await client.put(
             f"/private/v1/admin/keys/{bootstrap_key.id}", json={"activation_flag": True}
         )
@@ -92,20 +96,7 @@ class TestUpdateKeyEndpoint:
         assert resp.json()["detail"] == "Key has expired"
 
     async def test_update_key_expired_deactivate(self, client, db_session):
-        created = datetime.now(tz=timezone.utc) - timedelta(days=31)
-        expiration_date = created - timedelta(days=10)
-        rnd_str = "".join(random.choices(string.ascii_uppercase + string.digits, k=64))
-        bootstrap_key = BootstrapKey(
-            key_hash=rnd_str[:32],
-            key_hint=rnd_str[:4],
-            group="test",
-            is_active=True,
-            created_date=created,
-            expiration_date=expiration_date,
-        )
-        db_session.add(bootstrap_key)
-        await db_session.commit()
-        await db_session.refresh(bootstrap_key)
+        bootstrap_key = await self.create_key(db_session, activation_flag=False)
         resp = await client.put(
             f"/private/v1/admin/keys/{bootstrap_key.id}", json={"activation_flag": False}
         )

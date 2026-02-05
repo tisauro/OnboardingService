@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, status
 
 from app.api.deps import PaginationDep, SessionDep
@@ -12,14 +14,15 @@ from app.core.crud.bootstrap_keys import (
 from app.core.schemas import schemas
 from app.core.schemas.schemas import BootstrapKeyUpdateRequest
 
+logger = logging.getLogger(__name__)
 # ==============================================================================
 # Private Endpoints: Admin Management
 # ==============================================================================
 
-boostrap_key_router = APIRouter()
+bootstrap_key_router = APIRouter()
 
 
-@boostrap_key_router.post(
+@bootstrap_key_router.post(
     "/admin/keys",
     response_model=schemas.BootstrapKeyCreateResponse,
     tags=["Admin"],
@@ -42,22 +45,24 @@ async def create_bootstrap_key(
     try:
         db_key, raw_key = await create_key(db, key_data)
     except Exception as e:
+        logger.exception(f"Failed to create bootstrap key: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create bootstrap key: {str(e)}",
+            detail="Failed to create bootstrap key",
         )
 
     return schemas.BootstrapKeyCreateResponse(
         id=db_key.id,
         raw_key=raw_key,  # Return the raw key this one time
         key_hint=db_key.key_hint,
-        group=db_key.group,
+        group=db_key.key_group,
         created_date=db_key.created_date,
         expiration_date=db_key.expiration_date,
+        is_active=db_key.is_active,
     )
 
 
-@boostrap_key_router.get(
+@bootstrap_key_router.get(
     "/admin/keys",
     response_model=list[schemas.BootstrapKeyInfo],
     tags=["Admin"],
@@ -74,15 +79,16 @@ async def list_bootstrap_keys(
     try:
         keys = await get_keys(db, pagination)
     except Exception as e:
+        logger.exception(f"Failed to list keys: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list keys: {str(e)}",
+            detail="Failed to list keys",
         )
 
     return keys
 
 
-@boostrap_key_router.delete(
+@bootstrap_key_router.delete(
     "/admin/keys/{key_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     tags=["Admin"],
@@ -98,15 +104,16 @@ async def delete_bootstrap_key(key_id: int, db: SessionDep):
     except BootstrapKeyNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Key not found")
     except Exception as e:
+        logger.exception(f"Failed to delete key: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete key: {str(e)}",
+            detail="Failed to delete key",
         )
 
-    return None
+    return
 
 
-@boostrap_key_router.put(
+@bootstrap_key_router.put(
     "/admin/keys/{key_id}",
     response_model=schemas.BootstrapKeyInfo,
     tags=["Admin"],
@@ -128,8 +135,9 @@ async def activate_bootstrap_key(
     except BootstrapKeyExpiredError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Key has expired")
     except Exception as e:
+        logger.exception(f"Failed to update key: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update key: {str(e)}",
+            detail="Failed to update key",
         )
     return key

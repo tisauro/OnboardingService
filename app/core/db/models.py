@@ -1,6 +1,5 @@
-import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, func
 
 from app.core.db.database import Base
 
@@ -21,17 +20,10 @@ class BootstrapKey(Base):
     # Store the last 4 chars for easy identification in admin UIs
     key_hint = Column(String(4), nullable=False)
 
-    group = Column(String, index=True, nullable=True)
+    key_group = Column(String, index=True, nullable=True)
 
-    created_date = Column(
-        DateTime(timezone=True), default=datetime.datetime.now(datetime.timezone.utc)
-    )
+    created_date = Column(DateTime(timezone=True), server_default=func.now())
 
     expiration_date = Column(DateTime(timezone=True), nullable=True)
 
-    is_active = Column(Boolean, default=True, nullable=False)
-
-    # __table_args__ = (
-    #     Index("ix_bootstrap_keys_group", "group"),
-    #     Index("ix_bootstrap_keys_is_active", "is_active"),
-    # )
+    is_active = Column(Boolean, default=True, nullable=False, index=True)

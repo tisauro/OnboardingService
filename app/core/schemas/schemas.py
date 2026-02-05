@@ -12,7 +12,7 @@ class BootstrapKeyCreateRequest(BaseModel):
     Request body for creating a new bootstrap key.
     """
 
-    group: str | None = None
+    group: str | None = Field(default=None, min_length=1, max_length=255)
     expires_in_days: int = Field(default=30, ge=1, le=365)
 
 
@@ -27,7 +27,7 @@ class BootstrapKeyCreateResponse(BaseModel):
     group: str | None
     created_date: datetime.datetime
     expiration_date: datetime.datetime
-    is_active: bool = True
+    is_active: bool
 
 
 class BootstrapKeyInfo(BaseModel):
@@ -39,14 +39,13 @@ class BootstrapKeyInfo(BaseModel):
 
     id: int
     key_hint: str
-    group: str | None
+    group: str | None = Field(default=None, alias="key_group")
     created_date: datetime.datetime
     expiration_date: datetime.datetime | None
     is_active: bool
 
 
 class BootstrapKeyUpdateRequest(BaseModel):
-    # key_id: int
     activation_flag: bool
 
 
@@ -60,7 +59,13 @@ class DeviceRegistrationRequest(BaseModel):
     Request body for the /register endpoint.
     """
 
-    device_id: str
+    device_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=128,
+        pattern=r"^[a-zA-Z0-9_-]+$",
+        description="Unique identifier for the device",
+    )
 
 
 class DeviceProvisionResponse(BaseModel):
