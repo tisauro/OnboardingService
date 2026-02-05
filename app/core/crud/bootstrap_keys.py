@@ -34,16 +34,17 @@ async def create_key(
     db_key = models.BootstrapKey(
         key_hash=key_hash,
         key_hint=key_hint,
-        group=key_data.group,
+        key_group=key_data.group,
         created_date=created_date,
         expiration_date=expiration_date,
     )
     db.add(db_key)
     await db.commit()
+    await db.refresh(db_key)
     return db_key, raw_key
 
 
-async def get_keys(db: AsyncSession, pagination: PaginationDep):
+async def get_keys(db: AsyncSession, pagination: PaginationDep) -> list[models.BootstrapKey]:
     result = await db.execute(
         select(models.BootstrapKey)
         .order_by(models.BootstrapKey.id.desc())

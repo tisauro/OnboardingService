@@ -17,7 +17,7 @@ class TestBootstrapKeyCRUD:
         db_key, raw_key = await bootstrap_keys.create_key(db_session, key_data)
 
         assert db_key.id is not None
-        assert db_key.group == "test-group"
+        assert db_key.key_group == "test-group"
         assert len(raw_key) > 30
         assert db_key.key_hint == raw_key[-4:]
         assert db_key.is_active is True
@@ -28,12 +28,12 @@ class TestBootstrapKeyCRUD:
         )
         stored_key = result.scalar_one_or_none()
         assert stored_key is not None
-        assert stored_key.group == "test-group"
+        assert stored_key.key_group == "test-group"
 
     async def test_get_keys(self, db_session):
         # Create some keys first
         for i in range(3):
-            key_data = schemas.BootstrapKeyCreateRequest(group=f"group-{i}")
+            key_data = schemas.BootstrapKeyCreateRequest(key_group=f"group-{i}")
             await bootstrap_keys.create_key(db_session, key_data)
 
         pagination = {"skip": 0, "limit": 10}
@@ -44,7 +44,7 @@ class TestBootstrapKeyCRUD:
 
     async def test_update_key_status(self, db_session):
         # Create a key
-        key_data = schemas.BootstrapKeyCreateRequest(group="update-test")
+        key_data = schemas.BootstrapKeyCreateRequest(key_group="update-test")
         db_key, _ = await bootstrap_keys.create_key(db_session, key_data)
 
         # Deactivate it
@@ -65,7 +65,7 @@ class TestBootstrapKeyCRUD:
 
     async def test_delete_key(self, db_session):
         # Create a key
-        key_data = schemas.BootstrapKeyCreateRequest(group="delete-test")
+        key_data = schemas.BootstrapKeyCreateRequest(key_group="delete-test")
         db_key, _ = await bootstrap_keys.create_key(db_session, key_data)
 
         # Delete it
